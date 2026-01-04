@@ -250,16 +250,6 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-primary">Профессиональный словарь</h1>
             </div>
             <div className="flex items-center gap-2">
-              {showInstallButton && (
-                <Button
-                  onClick={handleInstallClick}
-                  className="gap-2"
-                  variant="outline"
-                >
-                  <Icon name="Download" size={18} />
-                  Установить
-                </Button>
-              )}
               <Button
                 variant={activeView === 'home' ? 'default' : 'ghost'}
                 onClick={() => setActiveView('home')}
@@ -276,6 +266,16 @@ const Index = () => {
                 <Icon name="Library" size={18} />
                 Библиотека
               </Button>
+              {deferredPrompt && (
+                <Button
+                  onClick={handleInstallClick}
+                  className="gap-2"
+                  variant="outline"
+                >
+                  <Icon name="Download" size={18} />
+                  Установить
+                </Button>
+              )}
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
@@ -351,21 +351,9 @@ const Index = () => {
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Создавайте, храните и расширяйте свой персональный словарь терминов с определениями и синонимами
               </p>
-              <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <p className="text-sm font-medium text-green-600">Работает без интернета</p>
-                </div>
-                {showInstallButton && (
-                  <Button
-                    onClick={handleInstallClick}
-                    className="gap-2"
-                    size="lg"
-                  >
-                    <Icon name="Download" size={20} />
-                    Установить приложение
-                  </Button>
-                )}
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-sm font-medium text-green-600">Работает без интернета</p>
               </div>
             </div>
 
