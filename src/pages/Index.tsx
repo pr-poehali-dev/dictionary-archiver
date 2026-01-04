@@ -301,10 +301,19 @@ const Index = () => {
         {activeView === 'home' && (
           <div className="space-y-8">
             <div className="text-center space-y-4 py-12">
+              <div className="flex justify-center mb-6">
+                <div className="w-24 h-24 bg-primary/10 rounded-2xl flex items-center justify-center">
+                  <Icon name="BookOpen" className="w-12 h-12 text-primary" />
+                </div>
+              </div>
               <h2 className="text-4xl font-bold text-primary">Управление профессиональным словарем</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Создавайте, храните и расширяйте свой персональный словарь терминов с определениями и синонимами
               </p>
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-sm font-medium text-green-600">Работает без интернета</p>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
