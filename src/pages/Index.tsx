@@ -14,6 +14,7 @@ interface WordEntry {
   word: string;
   definition: string;
   synonyms: string[];
+  category: string;
   createdAt: number;
 }
 
@@ -23,10 +24,12 @@ const Index = () => {
   const [newWord, setNewWord] = useState('');
   const [newDefinition, setNewDefinition] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<'home' | 'library' | 'add'>('home');
   const [editingWord, setEditingWord] = useState<WordEntry | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,6 +74,7 @@ const Index = () => {
       word: newWord.trim(),
       definition: newDefinition.trim(),
       synonyms: synonymsArray,
+      category: newCategory.trim() || 'Без категории',
       createdAt: Date.now()
     };
 
@@ -80,6 +84,7 @@ const Index = () => {
     setNewWord('');
     setNewDefinition('');
     setNewSynonyms('');
+    setNewCategory('');
     setIsAddDialogOpen(false);
 
     toast({
@@ -170,11 +175,27 @@ const Index = () => {
     reader.readAsText(file);
   };
 
-  const filteredWords = words.filter(w =>
-    w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.definition.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.synonyms.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const categories = ['all', ...Array.from(new Set(words.map(w => w.category)))];
+
+  const filteredWords = words.filter(w => {
+    const matchesSearch = w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.definition.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.synonyms.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      w.category.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === 'all' || w.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const groupedWords = filteredWords.reduce((acc, word) => {
+    const category = word.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(word);
+    return acc;
+  }, {} as Record<string, WordEntry[]>);
 
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
@@ -254,6 +275,14 @@ const Index = () => {
                         onChange={(e) => setNewSynonyms(e.target.value)}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Категория</label>
+                      <Input
+                        placeholder="Например: Бизнес, IT, Медицина"
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -327,9 +356,9 @@ const Index = () => {
                     <p className="text-3xl font-bold text-primary">{words.length}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">С синонимами</p>
+                    <p className="text-sm text-muted-foreground">Категорий</p>
                     <p className="text-3xl font-bold text-primary">
-                      {words.filter(w => w.synonyms.length > 0).length}
+                      {categories.filter(c => c !== 'all').length}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -380,14 +409,36 @@ const Index = () => {
               </div>
             </div>
 
-            <div className="relative">
-              <Icon name="Search" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="Поиск по словарю..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-12 text-base"
-              />
+            <div className="space-y-4">
+              <div className="relative">
+                <Icon name="Search" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по словарю..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-12 text-base"
+                />
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                  onClick={() => setSelectedCategory('all')}
+                  size="sm"
+                >
+                  Все ({words.length})
+                </Button>
+                {categories.filter(c => c !== 'all').map((category) => (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? 'default' : 'outline'}
+                    onClick={() => setSelectedCategory(category)}
+                    size="sm"
+                  >
+                    {category} ({words.filter(w => w.category === category).length})
+                  </Button>
+                ))}
+              </div>
             </div>
 
             {filteredWords.length === 0 ? (
@@ -402,55 +453,71 @@ const Index = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {filteredWords.map((word) => (
-                  <Card key={word.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-2xl mb-2">
-                            {highlightText(word.word, searchQuery)}
-                          </CardTitle>
-                          <CardDescription className="text-base leading-relaxed">
-                            {highlightText(word.definition, searchQuery)}
-                          </CardDescription>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(word)}
-                            className="text-primary hover:text-primary"
-                          >
-                            <Icon name="Pencil" size={18} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteWord(word.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Icon name="Trash2" size={18} />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    {word.synonyms.length > 0 && (
-                      <>
-                        <Separator />
-                        <CardContent className="pt-4">
-                          <p className="text-sm font-medium text-muted-foreground mb-2">Синонимы:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {word.synonyms.map((synonym, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-sm">
-                                {highlightText(synonym, searchQuery)}
-                              </Badge>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </>
-                    )}
-                  </Card>
+              <div className="space-y-8">
+                {Object.entries(groupedWords).map(([category, categoryWords]) => (
+                  <div key={category} className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px bg-border flex-1" />
+                      <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
+                        <Icon name="FolderOpen" size={20} />
+                        {category}
+                        <Badge variant="secondary">{categoryWords.length}</Badge>
+                      </h3>
+                      <div className="h-px bg-border flex-1" />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {categoryWords.map((word) => (
+                        <Card key={word.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <CardTitle className="text-2xl mb-2">
+                                  {highlightText(word.word, searchQuery)}
+                                </CardTitle>
+                                <CardDescription className="text-base leading-relaxed">
+                                  {highlightText(word.definition, searchQuery)}
+                                </CardDescription>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditDialog(word)}
+                                  className="text-primary hover:text-primary"
+                                >
+                                  <Icon name="Pencil" size={18} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => deleteWord(word.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Icon name="Trash2" size={18} />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          {word.synonyms.length > 0 && (
+                            <>
+                              <Separator />
+                              <CardContent className="pt-4">
+                                <p className="text-sm font-medium text-muted-foreground mb-2">Синонимы:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {word.synonyms.map((synonym, idx) => (
+                                    <Badge key={idx} variant="secondary" className="text-sm">
+                                      {highlightText(synonym, searchQuery)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -494,6 +561,14 @@ const Index = () => {
                     ...editingWord, 
                     synonyms: e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0)
                   })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Категория</label>
+                <Input
+                  placeholder="Например: Бизнес, IT, Медицина"
+                  value={editingWord.category}
+                  onChange={(e) => setEditingWord({...editingWord, category: e.target.value})}
                 />
               </div>
             </div>
