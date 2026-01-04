@@ -30,6 +30,8 @@ const Index = () => {
   const [editingWord, setEditingWord] = useState<WordEntry | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,6 +39,18 @@ const Index = () => {
     if (savedWords) {
       setWords(JSON.parse(savedWords));
     }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   const saveWords = (updatedWords: WordEntry[]) => {
@@ -102,6 +116,23 @@ const Index = () => {
       title: "Удалено",
       description: `Слово "${word?.word}" удалено из словаря`
     });
+  };
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === 'accepted') {
+      toast({
+        title: "Успешно установлено!",
+        description: "Приложение добавлено на ваше устройство"
+      });
+      setShowInstallButton(false);
+    }
+
+    setDeferredPrompt(null);
   };
 
   const openEditDialog = (word: WordEntry) => {
@@ -219,6 +250,16 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-primary">Профессиональный словарь</h1>
             </div>
             <div className="flex items-center gap-2">
+              {showInstallButton && (
+                <Button
+                  onClick={handleInstallClick}
+                  className="gap-2"
+                  variant="outline"
+                >
+                  <Icon name="Download" size={18} />
+                  Установить
+                </Button>
+              )}
               <Button
                 variant={activeView === 'home' ? 'default' : 'ghost'}
                 onClick={() => setActiveView('home')}
@@ -310,9 +351,21 @@ const Index = () => {
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Создавайте, храните и расширяйте свой персональный словарь терминов с определениями и синонимами
               </p>
-              <div className="flex items-center justify-center gap-2 pt-4">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <p className="text-sm font-medium text-green-600">Работает без интернета</p>
+              <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <p className="text-sm font-medium text-green-600">Работает без интернета</p>
+                </div>
+                {showInstallButton && (
+                  <Button
+                    onClick={handleInstallClick}
+                    className="gap-2"
+                    size="lg"
+                  >
+                    <Icon name="Download" size={20} />
+                    Установить приложение
+                  </Button>
+                )}
               </div>
             </div>
 
