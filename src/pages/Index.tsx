@@ -25,6 +25,8 @@ const Index = () => {
   const [newSynonyms, setNewSynonyms] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<'home' | 'library' | 'add'>('home');
+  const [editingWord, setEditingWord] = useState<WordEntry | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -94,6 +96,36 @@ const Index = () => {
     toast({
       title: "Удалено",
       description: `Слово "${word?.word}" удалено из словаря`
+    });
+  };
+
+  const openEditDialog = (word: WordEntry) => {
+    setEditingWord(word);
+    setIsEditDialogOpen(true);
+  };
+
+  const updateWord = () => {
+    if (!editingWord) return;
+
+    if (!editingWord.word.trim() || !editingWord.definition.trim()) {
+      toast({
+        title: "Ошибка",
+        description: "Заполните слово и определение",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updatedWords = words.map(w => 
+      w.id === editingWord.id ? editingWord : w
+    );
+    saveWords(updatedWords);
+    setIsEditDialogOpen(false);
+    setEditingWord(null);
+
+    toast({
+      title: "Обновлено",
+      description: `Слово "${editingWord.word}" успешно изменено`
     });
   };
 
@@ -383,14 +415,24 @@ const Index = () => {
                             {highlightText(word.definition, searchQuery)}
                           </CardDescription>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteWord(word.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Icon name="Trash2" size={18} />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(word)}
+                            className="text-primary hover:text-primary"
+                          >
+                            <Icon name="Pencil" size={18} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteWord(word.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Icon name="Trash2" size={18} />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     {word.synonyms.length > 0 && (
@@ -415,6 +457,55 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Редактировать слово</DialogTitle>
+            <DialogDescription>
+              Внесите изменения в информацию о слове
+            </DialogDescription>
+          </DialogHeader>
+          {editingWord && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Слово</label>
+                <Input
+                  placeholder="Введите слово"
+                  value={editingWord.word}
+                  onChange={(e) => setEditingWord({...editingWord, word: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Определение</label>
+                <Textarea
+                  placeholder="Введите определение слова"
+                  value={editingWord.definition}
+                  onChange={(e) => setEditingWord({...editingWord, definition: e.target.value})}
+                  rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Синонимы</label>
+                <Input
+                  placeholder="Введите синонимы через запятую"
+                  value={editingWord.synonyms.join(', ')}
+                  onChange={(e) => setEditingWord({
+                    ...editingWord, 
+                    synonyms: e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                  })}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={updateWord}>Сохранить изменения</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
